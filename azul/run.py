@@ -1,3 +1,5 @@
+import random
+
 import definitions
 
 
@@ -26,7 +28,10 @@ def play(game):
         while not game.is_last_turn():
             player_turn_id = (player_turn_id + 1) % game.player_no
             print("Player's turn: " + str(player_turn_id))
-            game.players[player_turn_id].pick_tiles()
+            chosen_display = random.randint(-1, 5)
+            chosen_color = random.choice(definitions.tile_colors)
+            chosen_pattern_line_row = random.randint(0, 5)
+            game.players[player_turn_id].pick_tiles(chosen_display, chosen_color, chosen_pattern_line_row)
 
         for player in game.players:
             player.turn_end()

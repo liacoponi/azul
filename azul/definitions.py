@@ -1,5 +1,7 @@
 import random
 
+tile_colors = ['or', 'rd', 'bk', 'wh', 'bl']
+
 
 class Bag:
     def __init__(self):
@@ -7,7 +9,7 @@ class Bag:
 
     def refill_bag(self):
         # TODO: make a tile object
-        self.tiles = [tile * 20 for tile in ['bk', 'bl', 'red', 'orange', 'white']]
+        self.tiles = [tile * 20 for tile in tile_colors]
         random.shuffle(self.tiles)
 
     def pick_from_bag(self):
@@ -20,44 +22,35 @@ class Bag:
 class Factory:
     def __init__(self, no_of_players):
         # 2 player -> 5 displays, 3 -> 7, 4 -> 9
-        self.no_of_displays = no_of_players * 2 + 1
+        # formula is x * 2 + 1
+        # and adds another + 1 for the center, which is display[0]
+        self.no_of_displays = no_of_players * 2 + 2
         self.displays = [None for _ in range(self.no_of_displays)]
-        self.center = []
-        self.center = ['1']
 
     def pick_from_display(self, display_num, color):
-        tiles_num = self.count(display_num, color)
-        self.display[display_num] = []
-        # picked from the center
-        if display_num:
-            self.display[0] = []
-        return tiles_num
+        picked_tiles = [tile for tile in self.displays[display_num] if color == tile]
+        discarded_tiles = [tile for tile in self.displays[display_num] if color != tile]
+        # picked from the center, just remove tiles from the center
+        if not display_num:
+            self.display[0] = [tile for tile in self.displays[0] if color != tile]
+        # picked from display, add discarded tiles to the center
+        else:
+            self.displays[0] += discarded_tiles
+        return picked_tiles
 
 
 class Wall:
     def __init__(self):
-        self.wall = [['' * 5]['' * 5]]
+        # rotate the list, then revert it to get the 5X5 wall
+        w = tile_colors
+        wall = []
+        for _ in range(5):
+            wall.append(w[:])
+            wall.append(w.pop(0))
+        self.wall = w.reverse()
 
     def add_tile(self, tile_color, row_number):
         self.wall[row_number][0] = 0  # TODO
-
-
-class PatternLine:
-    def __init__(self, size):
-        self.line_color = None
-        self.tiles_left = size
-
-    def fill_line(self, color, tiles_to_add):
-        if not self.tiles:
-            return tiles_to_add
-        # different color, return all tiles
-        if self.line_color and self.line_color != color:
-            return tiles_to_add
-        else:
-            tile_diff = tiles_to_add - tiles_to_add
-            self.tiles_left = max(0, tile_diff)
-            # return tiles to drop on floor tile
-            return min(tile_diff, 0)
 
 
 class Game:
@@ -76,17 +69,25 @@ class Game:
         self.games_counter += 1
         self.pick_first_player()
 
-    def pick_first_player(self, number_of_players):
-        self.first_player_id = random.randint(0, number_of_players)
+    def pick_first_player(self):
+        self.first_player_id = random.randint(0, self.player_no)
 
     def turn_reset(self):
         # reset factory displays and center
-        for i in range(self.factory.displays):
-            self.factory.displays[i] = self.bag.pick_from_bag(4)
+        for i in range(len(self.factory.displays)):
+            self.factory.displays[i] = self.bag.pick_from_bag()
         self.factory.center = ['1']
         # reset players' pattern tiles and floor
         for player in self.players:
             player.reset_lines()
+
+    def transfer_tiles(self, player_id, display_num, color, row):
+        selected_tiles = self.factory.pick_from_display(display_num, color)
+        if ['1'] in selected_tiles:
+            self.game.is_first = player_id
+            selected_tiles.remove('1')
+        # add tiles to player pattern and floor lines
+        self.player.place_tiles(tiles=selected_tiles, pattern_line=row, picked_1=True)
 
     def is_last_turn(self):
         if not self.factory.center and not any(self.factory.displays):
@@ -104,23 +105,32 @@ class Player:
         self.has_finished_row = 0
 
     def reset_lines(self):
-        self.pattern_lines = [PatternLine(size) for size in range(5)]
+        # todo: fix this
+        self.pattern_lines = [size for size in range(5)]
         self.floor_tiles = []
 
     def reset_board(self):
         self.reset_lines()
         self.wall.clear_wall()
 
-    def pick_tiles(self, display, color, pattern_line_row):
-        picked_tiles = factory.pick(color, display)
-        # ['white', 'white', '1']
-        if ['1'] in picked_tiles:
+    def place_tiles(self, tiles, pattern_line_num, picked_1):
+        tile_color = tiles[0]
+        line = self.pattern_lines[pattern_line_num]
+        if picked_1:
             self.floor_tiles.append('1')
-            self.game.is_first = self.player_id
-            picked_tiles.remove('1')
+        # color not in the wall and line has no another color than tile_color
+        if tile_color not in self.wall and (tile_color in line or not any(tiles)):
+            for i, tile_space in enumerate(tiles):
+                # tile space is empty
+                if not tile_space:
+                    try:
+                        tiles[i] = tiles.pop(0)
+                    # no more tiles to add
+                    except IndexError:
+                        break
 
-        n_of_discarded_tiles = self.pattern_lines[pattern_line_row].fill_line(color, picked_tiles)
-        self.floor_tiles.append(color * n_of_discarded_tiles)
+        # add leftover tiles to the floor
+        self.floor_tiles += tiles
 
     def turn_end(self):
         victory_points_before = self.victory_points
