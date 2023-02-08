@@ -32,7 +32,7 @@ class Factory:
         discarded_tiles = [tile for tile in self.displays[display_num] if color != tile]
         # picked from the center, just remove tiles from the center
         if not display_num:
-            self.display[0] = [tile for tile in self.displays[0] if color != tile]
+            self.displays[0] = [tile for tile in self.displays[0] if color != tile]
         # picked from display, add discarded tiles to the center
         else:
             self.displays[0] += discarded_tiles
@@ -84,13 +84,13 @@ class Game:
     def transfer_tiles(self, player_id, display_num, color, row):
         selected_tiles = self.factory.pick_from_display(display_num, color)
         if ['1'] in selected_tiles:
-            self.game.is_first = player_id
+            self.is_first = player_id
             selected_tiles.remove('1')
         # add tiles to player pattern and floor lines
-        self.player.place_tiles(tiles=selected_tiles, pattern_line=row, picked_1=True)
+        self.players[player_id].place_tiles(tiles=selected_tiles, pattern_line=row, picked_1=True)
 
     def is_last_turn(self):
-        if not self.factory.center and not any(self.factory.displays):
+        if not self.factory.displays[0] and not any(self.factory.displays):
             return True
 
 
@@ -111,7 +111,7 @@ class Player:
 
     def reset_board(self):
         self.reset_lines()
-        self.wall.clear_wall()
+        self.wall = Wall()
 
     def place_tiles(self, tiles, pattern_line_num, picked_1):
         tile_color = tiles[0]
@@ -141,7 +141,7 @@ class Player:
                 # pattern line is complete, move tile and add points
                 self.victory_points += self.wall.add(row_color, row_number)
                 # completed row in wall, end game
-                if None not in self.wall.row[row_number]:
+                if all(self.wall[row_number]):
                     self.has_finished_row = True
 
         self.victory_points_last_turn = victory_points_before - self.victory_points
