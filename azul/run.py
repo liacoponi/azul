@@ -25,12 +25,20 @@ def play_a_turn(game, player):
     if len(valid_picks) == 1:
         game.is_last_turn = True
     valid_line_colors = player.get_valid_line_colors()
-    valid_moves = []  # TODO
+    valid_moves = []
+    for valid_pick in valid_picks:
+        display, color = valid_pick
+        if color != '1':
+            valid_moves_tuples = tuple((display, color, line) for line in valid_line_colors[color])
+            for valid_tuple in valid_moves_tuples:
+                valid_moves.append(valid_tuple)
+                # valid_moves.append(tuple(valid_tuple for valid_tuple in valid_moves_tuples))
+        valid_moves.append((display, color, 'floor'))
+
     # randomly pick for now, add AI/Player input here
-    display, color = random.choice(valid_moves)
-    pattern_line_row = random.randint(0, 4)
-    logging.info(f'\tdisplay: {display}\n\tcolor: {color}\n\tto line: {pattern_line_row}')
-    game.transfer_tiles(player.id, display, color, pattern_line_row)
+    display, color, to_line = random.choice(valid_moves)
+    logging.info(f'\tdisplay: {display}\n\tcolor: {color}\n\tto line: {to_line}')
+    game.transfer_tiles(player, display, color, to_line)
 
 
 def play(game):
