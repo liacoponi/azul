@@ -1,6 +1,7 @@
+import logging
 import random
 
-tile_colors = ['or', 'rd', 'bk', 'wh', 'bl']
+tile_colors = ['black', 'orange', 'red', 'black', 'white']
 
 
 class Bag:
@@ -9,14 +10,14 @@ class Bag:
 
     def refill_bag(self):
         # TODO: make a tile object
-        self.tiles = [tile * 20 for tile in tile_colors]
+        self.tiles = [tile for tile in tile_colors for _ in range(20)]
         random.shuffle(self.tiles)
 
     def pick_from_bag(self):
         if len(self.tiles) < 4:
             # TODO: should take then refill
             self.refill_bag()
-        return [self.tiles.pop() for _ in range(4)]
+        return [self.tiles.pop(0) for _ in range(4)]
 
 
 class Factory:
@@ -33,24 +34,31 @@ class Factory:
         # picked from the center, just remove tiles from the center
         if not display_num:
             self.displays[0] = [tile for tile in self.displays[0] if color != tile]
-        # picked from display, add discarded tiles to the center
+        # picked from display, remove all tiles from display and add discarded tiles to the center
         else:
+            self.displays[display_num] = []
             self.displays[0] += discarded_tiles
         return picked_tiles
+
+    def get_valid_picks(self):
+        valid_picks = []
+        for i in range(len(self.displays)):
+            for color in set(self.displays[i]):
+                valid_picks.append((i, color))
+        return valid_picks
 
 
 class Wall:
     def __init__(self):
-        # rotate the list, then revert it to get the 5X5 wall
-        w = tile_colors
-        wall = []
-        for _ in range(5):
-            wall.append(w[:])
-            wall.append(w.pop(0))
-        self.wall = w.reverse()
+        # create the wall, upper means empty
+        wall_space = [[tile.upper() for tile in tile_colors]]
+        for i in range(1, 5):
+            rotated_list = [wall_space[i - 1][4]] + wall_space[i - 1][0:4]
+            wall_space.append(rotated_list)
+        self.wall_space = wall_space
 
     def add_tile(self, tile_color, row_number):
-        self.wall[row_number][0] = 0  # TODO
+        self.wall_space[row_number][0] = 0  # TODO
 
 
 class Game:
@@ -61,7 +69,8 @@ class Game:
         self.bag = Bag()
         self.first_player_id = 0
         self.games_counter = 0
-        self.is_last_round = 0
+        self.is_last_turn = False
+        self.is_last_round = False
 
     def new_game(self):
         self.factory = Factory(self.player_no)
@@ -74,29 +83,27 @@ class Game:
 
     def turn_reset(self):
         # reset factory displays and center
-        for i in range(len(self.factory.displays)):
+        self.factory.displays[0] = ['1']
+        for i in range(1, len(self.factory.displays)):
             self.factory.displays[i] = self.bag.pick_from_bag()
-        self.factory.center = ['1']
         # reset players' pattern tiles and floor
         for player in self.players:
             player.reset_lines()
 
-    def transfer_tiles(self, player_id, display_num, color, row):
+    def transfer_tiles(self, player, display_num, color, row):
+        picked_1 = False
         selected_tiles = self.factory.pick_from_display(display_num, color)
         if ['1'] in selected_tiles:
-            self.is_first = player_id
+            self.first_player_id = player.id
             selected_tiles.remove('1')
+            picked_1 = True
         # add tiles to player pattern and floor lines
-        self.players[player_id].place_tiles(tiles=selected_tiles, pattern_line=row, picked_1=True)
-
-    def is_last_turn(self):
-        if not self.factory.displays[0] and not any(self.factory.displays):
-            return True
+        self.player.place_tiles(selected_tiles, row, picked_1)
 
 
 class Player:
     def __init__(self, player_id):
-        self.name = player_id
+        self.id = player_id
         self.victory_points = 0
         self.floor_tiles = []
         self.wall = Wall()
@@ -106,7 +113,7 @@ class Player:
 
     def reset_lines(self):
         # todo: fix this
-        self.pattern_lines = [size for size in range(5)]
+        self.pattern_lines = [[None for _ in range(size)] for size in range(1, 6)]
         self.floor_tiles = []
 
     def reset_board(self):
@@ -118,8 +125,8 @@ class Player:
         line = self.pattern_lines[pattern_line_num]
         if picked_1:
             self.floor_tiles.append('1')
-        # color not in the wall and line has no another color than tile_color
-        if tile_color not in self.wall and (tile_color in line or not any(tiles)):
+        # add the tile, color is not in the wall and line has no another color than tile_color
+        if tile_color not in self.wall.wall_space and (tile_color in line or not any(tiles)):
             for i, tile_space in enumerate(tiles):
                 # tile space is empty
                 if not tile_space:
@@ -133,19 +140,21 @@ class Player:
         self.floor_tiles += tiles
 
     def turn_end(self):
-        victory_points_before = self.victory_points
-        # Add pattern line tiles to the wall
-        for row_number, row in enumerate(self.floor_tiles):
-            row_color = row[0]
-            if None not in row:
+        # Add pattern-line tiles to the wall
+        for line_number, line in enumerate(self.pattern_lines):
+            if all(line):
                 # pattern line is complete, move tile and add points
-                self.victory_points += self.wall.add(row_color, row_number)
+                self.victory_points += self.wall.add(line[0], line_number)
                 # completed row in wall, end game
-                if all(self.wall[row_number]):
+                if all(self.wall[line_number]):
                     self.has_finished_row = True
 
-        self.victory_points_last_turn = victory_points_before - self.victory_points
+        floor_scores = {0: 0, 1: 1, 2: 2, 3: 4, 4: 6, 5: 8, 6: 11, 7: 14}
+        floor_malus = floor_scores[min(len(self.floor_tiles), 7)]
+        self.victory_points -= floor_malus
+        logging.info(f'\tfloor tiles -{floor_malus}')
 
-    def score_final_vp(self):
+    @staticmethod
+    def score_final_vp():
         # ToDo: finis method and add score breakdown
         return 10
