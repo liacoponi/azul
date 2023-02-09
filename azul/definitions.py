@@ -2,14 +2,14 @@ import logging
 import random
 
 COLORS = ['blue', 'orange', 'red', 'black', 'white']
-# displays[0] is center, player.floor is floor
+
 
 class Bag:
     def __init__(self):
         self.tiles = []
 
     def refill_bag(self):
-        # TODO: make a tile object
+        logging.info("- Refill bag")
         self.tiles = [tile for tile in COLORS for _ in range(20)]
         random.shuffle(self.tiles)
 
@@ -58,6 +58,7 @@ class Wall:
         self.wall_space = wall_space
 
     def add_tile(self, tile_color, line_num):
+        logging.info(f'\tAdd {tile_color} to wall line {line_num}')
         wall_tile_index = self.wall_space[line_num].index(tile_color.upper())
         self.wall_space[line_num][wall_tile_index] = tile_color.lower()
         return True
@@ -75,6 +76,7 @@ class Game:
         self.is_last_round = False
 
     def new_game(self):
+        logging.info("\n** Game starts **")
         self.factory = Factory(self.player_no)
         self.bag.refill_bag()
         self.games_counter += 1
@@ -83,22 +85,42 @@ class Game:
     def pick_first_player(self):
         self.first_player_id = random.randint(0, self.player_no)
 
-    def turn_reset(self):
+    def round_reset(self):
         # reset factory displays and center
+        logging.info('\n** Round Setup Starts **')
         self.factory.displays[0] = ['1']
         for i in range(1, len(self.factory.displays)):
             self.factory.displays[i] = self.bag.pick_from_bag()
+            logging.info(f'- Refill display {i}:  {self.factory.displays[i]}')
         # reset players' pattern tiles and floor
         for player in self.players:
             player.reset_lines()
+        logging.info('\n** Round Play Starts **')
 
-    def transfer_tiles(self, player, display_num, color, row):
-        picked_1 = False
+    def get_valid_moves(self, player_id):
+        player = self.players[player_id]
+        valid_picks = self.factory.get_valid_picks()
+        # last move
+        if len(valid_picks) == 1:
+            self.is_last_turn = True
+        valid_line_colors = player.get_valid_line_colors()
+        valid_moves = []
+        for valid_pick in valid_picks:
+            display, color = valid_pick
+            if color != '1':
+                valid_moves_tuples = tuple((display, color, line) for line in valid_line_colors[color])
+                for valid_tuple in valid_moves_tuples:
+                    valid_moves.append(valid_tuple)
+            valid_moves.append((display, color, 'floor'))
+        return valid_moves
+
+    def transfer_tiles(self, player, display_num, color, to_line):
         selected_tiles = self.factory.pick_from_display(display_num, color)
         if ['1'] in selected_tiles:
             self.first_player_id = player.id
         # add tiles to player pattern and floor lines
-        player.place_tiles(selected_tiles, row)
+        player.place_tiles(selected_tiles, to_line)
+        logging.info(f'\t{color}: {display_num} -> {to_line}')
 
 
 class Player:
@@ -112,6 +134,7 @@ class Player:
         self.floor = []
 
     def reset_lines(self):
+        logging.info(f'- Player {self.id} resets their lines')
         self.pattern_lines = [[None for _ in range(size)] for size in range(1, 6)]
 
     def reset_board(self):
@@ -155,7 +178,7 @@ class Player:
         floor_malus = floor_scores[min(len(self.floor), 7)]
         self.victory_points -= floor_malus
         self.floor = []
-        logging.info(f'\tfloor tiles -{floor_malus}')
+        logging.info(f'\t-{floor_malus} VP: Floor tiles')
 
     def get_valid_line_colors(self):
         """return a list containing a list of valid/acceptable color tile for each line"""
