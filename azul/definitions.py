@@ -1,7 +1,7 @@
 import logging
 import random
 
-tile_colors = ['black', 'orange', 'red', 'black', 'white']
+COLORS = ['blue', 'orange', 'red', 'black', 'white']
 
 
 class Bag:
@@ -10,7 +10,7 @@ class Bag:
 
     def refill_bag(self):
         # TODO: make a tile object
-        self.tiles = [tile for tile in tile_colors for _ in range(20)]
+        self.tiles = [tile for tile in COLORS for _ in range(20)]
         random.shuffle(self.tiles)
 
     def pick_from_bag(self):
@@ -51,7 +51,7 @@ class Factory:
 class Wall:
     def __init__(self):
         # create the wall, upper means empty
-        wall_space = [[tile.upper() for tile in tile_colors]]
+        wall_space = [[tile.upper() for tile in COLORS]]
         for i in range(1, 5):
             rotated_list = [wall_space[i - 1][4]] + wall_space[i - 1][0:4]
             wall_space.append(rotated_list)
@@ -153,6 +153,21 @@ class Player:
         floor_malus = floor_scores[min(len(self.floor_tiles), 7)]
         self.victory_points -= floor_malus
         logging.info(f'\tfloor tiles -{floor_malus}')
+
+    def get_valid_line_colors(self):
+        """return a list containing a list of valid/acceptable color tile for each line"""
+        # defines in which lines you can put each color
+        valid_color_lines = {color: [] for color in COLORS}
+        for color in COLORS:
+            for i, line in enumerate(self.pattern_lines):
+                if color in self.wall.wall_space[i]:
+                    continue
+                line_is_empty = not any(line)
+                # e.g. True:  W -> ['W', None]; W -> [None, None]
+                # e.g. False: W -> ['Bl', None]
+                if color in line or line_is_empty:
+                    valid_color_lines[color].append(i)
+        return valid_color_lines
 
     @staticmethod
     def score_final_vp():

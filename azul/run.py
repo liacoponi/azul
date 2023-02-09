@@ -24,6 +24,7 @@ def play_a_turn(game, player):
     # last move
     if len(valid_picks) == 1:
         game.is_last_turn = True
+    valid_line_colors = player.get_valid_line_colors()
     valid_moves = []  # TODO
     # randomly pick for now, add AI/Player input here
     display, color = random.choice(valid_moves)
