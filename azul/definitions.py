@@ -57,11 +57,22 @@ class Wall:
             wall_space.append(rotated_list)
         self.wall_space = wall_space
 
-    def add_tile(self, tile_color, line_num):
-        logging.info(f'\tAdd {tile_color} to wall line {line_num}')
-        wall_tile_index = self.wall_space[line_num].index(tile_color.upper())
-        self.wall_space[line_num][wall_tile_index] = tile_color.lower()
-        return True
+    def adjacent_tiles_points(self, x, y):
+        vp = 0
+        adjacent_indexes = [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
+        for (row, col) in adjacent_indexes:
+            if (0 <= row <= 4) and (0 <= col <= 4):
+                if self.wall_space[row][col].islower():
+                    vp += 1
+        return vp
+
+    def add_tile(self, tile_color, wall_row):
+        wall_vp = 1
+        wall_col = self.wall_space[wall_row].index(tile_color.upper())
+        self.wall_space[wall_row][wall_col] = tile_color.lower()
+        wall_vp += self.adjacent_tiles_points(wall_row, wall_col)
+        logging.info(f'\t+{wall_vp} VP: {tile_color} -> {wall_row}')
+        return wall_vp
 
 
 class Game:
@@ -122,6 +133,11 @@ class Game:
         player.place_tiles(selected_tiles, to_line)
         logging.info(f'\t{color}: {display_num} -> {to_line}')
 
+    def final_scores(self):
+        logging.info('Final scores:')
+        for player in sorted(self.players, key=lambda x: x.count, reverse=True):
+            logging.info(f'- Player {player.id} score: {player.victory_points}')
+
 
 class Player:
     def __init__(self, player_id):
@@ -166,13 +182,15 @@ class Player:
 
     def turn_end(self):
         # Add pattern-line tiles to the wall
+        logging.info(f'Player {self.id} score:')
         for line_number, line in enumerate(self.pattern_lines):
             if all(line):
                 # pattern line is complete, move tile and add points
                 self.victory_points += self.wall.add_tile(line[0], line_number)
                 # completed row in wall, end game
-                if all(self.wall.wall_space[line_number]):
+                if all([tile.islower() for tile in self.wall.wall_space[line_number]]):
                     self.has_finished_row = True
+                    logging.info(f'\tCompleted row {line_number}')
 
         floor_scores = {0: 0, 1: 1, 2: 2, 3: 4, 4: 6, 5: 8, 6: 11, 7: 14}
         floor_malus = floor_scores[min(len(self.floor), 7)]
@@ -197,5 +215,5 @@ class Player:
 
     @staticmethod
     def score_final_vp():
-        # ToDo: finis method and add score breakdown
+        # ToDo: finish method and add score breakdown
         return 10

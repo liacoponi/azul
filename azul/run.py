@@ -38,17 +38,22 @@ def play(game):
             player_id = (player_id + 1) % game.player_no
             play_a_turn(game, game.players[player_id])
 
-        # end player turn and possibly the game
+        # end players' turn
+        logging.info('** Turn ends **')
         for player in game.players:
-            logging.info('** Turn ends **')
             player.turn_end()
+            # end the game
             if player.has_finished_row:
                 game.is_last_round = True
-                logging.info('** Game ends **')
+            else:
+                game.is_last_turn = False
 
     # End of game scoring
     for player in game.players:
         player.score_final_vp()
+    logging.info('** Game ends **')
+    game.final_scores()
+    game.games_counter += 1
 
 
 if __name__ == '__main__':
