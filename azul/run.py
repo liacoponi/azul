@@ -49,9 +49,9 @@ def play(game):
                 game.is_last_turn = False
 
     # End of game scoring
+    logging.info('** Game ends **')
     for player in game.players:
         player.score_final_vp()
-    logging.info('** Game ends **')
     game.final_scores()
     game.games_counter += 1
 

@@ -59,6 +59,7 @@ class Wall:
 
     def adjacent_tiles_points(self, x, y):
         vp = 0
+        # todo: scoring is not like this!
         adjacent_indexes = [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
         for (row, col) in adjacent_indexes:
             if (0 <= row <= 4) and (0 <= col <= 4):
@@ -135,7 +136,7 @@ class Game:
 
     def final_scores(self):
         logging.info('Final scores:')
-        for player in sorted(self.players, key=lambda x: x.count, reverse=True):
+        for player in self.players:
             logging.info(f'- Player {player.id} score: {player.victory_points}')
 
 
@@ -190,7 +191,7 @@ class Player:
                 # completed row in wall, end game
                 if all([tile.islower() for tile in self.wall.wall_space[line_number]]):
                     self.has_finished_row = True
-                    logging.info(f'\tCompleted row {line_number}')
+                    logging.info(f'\tCompleted row {line_number}!')
 
         floor_scores = {0: 0, 1: 1, 2: 2, 3: 4, 4: 6, 5: 8, 6: 11, 7: 14}
         floor_malus = floor_scores[min(len(self.floor), 7)]
@@ -213,7 +214,37 @@ class Player:
                     valid_color_lines[color].append(i)
         return valid_color_lines
 
-    @staticmethod
-    def score_final_vp():
-        # ToDo: finish method and add score breakdown
-        return 10
+    def score_final_vp(self):
+        # yes, you can do this in one pass or with a matrix, to perhaps save 0.1ms and look smart
+        # score rows
+        logging.info(f'Player {self.id} additional scores:')
+        wall = self.wall.wall_space
+        completed_rows_vp = 0
+        completed_cols_vp = 0
+        completed_colors_vp = 0
+        for row in range(5):
+            for col in range(5):
+                if wall[row][col].isupper():
+                    break
+                if col == 4:
+                    logging.info(f'\t+2 VP Completed row: {row}')
+                    completed_rows_vp += 2
+        # score cols
+        for col in range(5):
+            for row in range(5):
+                if wall[row][col].isupper():
+                    break
+                if row == 4:
+                    logging.info(f'\t+7 VP Completed column: {col}')
+                    completed_cols_vp += 7
+        # score colors
+        flattened_wall = [wall[row][col] for row in range(5) for col in range(5) if wall[row][col].islower()]
+        for color in COLORS:
+            if flattened_wall.count(color) == 5:
+                logging.info(f'\t+10 VP: Completed color: {color}')
+                completed_colors_vp += 10
+        # sum scores
+        additional_score = completed_colors_vp + completed_cols_vp + completed_rows_vp
+        if not additional_score:
+            logging.info('\t+0 VP: No additional score')
+        self.victory_points += additional_score
