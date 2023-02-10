@@ -20,4 +20,4 @@ def main(no_of_players, no_of_games):
 
 
 if __name__ == '__main__':
-    main(no_of_players=2, no_of_games=2)
+    main(no_of_players=2, no_of_games=1)
