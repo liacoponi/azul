@@ -9,7 +9,7 @@ class Bag:
         self.tiles = []
 
     def refill_bag(self):
-        logging.info("- Refill bag")
+        logging.info("- Bag refilled")
         self.tiles = [tile for tile in COLORS for _ in range(20)]
         random.shuffle(self.tiles)
 
@@ -59,12 +59,39 @@ class Wall:
 
     def adjacent_tiles_points(self, x, y):
         vp = 0
+        wall = self.wall_space
         # todo: scoring is not like this!
         adjacent_indexes = [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
         for (row, col) in adjacent_indexes:
             if (0 <= row <= 4) and (0 <= col <= 4):
-                if self.wall_space[row][col].islower():
-                    vp += 1
+                if wall[row][col].islower():
+                    vp += self.calculate_adjacency_points(row, col, wall)
+        return vp
+
+    @staticmethod
+    def calculate_adjacency_points(row, col, wall):
+        vp = 1
+        # check up
+        tile_above = row - 1
+        while tile_above >= 0:
+            if wall[tile_above][col].isupper():
+                break
+            vp += 1
+            tile_above -= 1
+        # check left
+        tile_left = col - 1
+        while tile_left >= 0:
+            if wall[row][tile_left].isupper():
+                break
+            vp += 1
+            tile_left -= 1
+        # check right
+        tile_right = col + 1
+        while tile_right <= 4:
+            if wall[row][tile_left].isupper():
+                break
+            vp += 1
+            tile_right += 1
         return vp
 
     def add_tile(self, tile_color, wall_row):
@@ -88,10 +115,12 @@ class Game:
         self.is_last_round = False
 
     def new_game(self):
-        logging.info("\n** Game starts **")
+        self.games_counter += 1
+        logging.info('\n** Game starts **')
+        logging.info(f'- Game no: {self.games_counter}')
+        logging.info(f'- Players no: {self.player_no}')
         self.factory = Factory(self.player_no)
         self.bag.refill_bag()
-        self.games_counter += 1
         self.pick_first_player()
 
     def pick_first_player(self):
@@ -100,11 +129,12 @@ class Game:
     def round_reset(self):
         # reset factory displays and center
         logging.info('\n** Round Setup Starts **')
-        self.factory.displays[0] = ['1']
         for i in range(1, len(self.factory.displays)):
             self.factory.displays[i] = self.bag.pick_from_bag()
             logging.info(f'- Refill display {i}:  {self.factory.displays[i]}')
         # reset players' pattern tiles and floor
+        self.factory.displays[0] = ['1']
+        logging.info(f"- Refill center: ['1']")
         for player in self.players:
             player.reset_lines()
         logging.info('\n** Round Play Starts **')
@@ -227,7 +257,7 @@ class Player:
                 if wall[row][col].isupper():
                     break
                 if col == 4:
-                    logging.info(f'\t+2 VP Completed row: {row}')
+                    logging.info(f'\t+2 VP: Completed row: {row}')
                     completed_rows_vp += 2
         # score cols
         for col in range(5):
@@ -246,5 +276,5 @@ class Player:
         # sum scores
         additional_score = completed_colors_vp + completed_cols_vp + completed_rows_vp
         if not additional_score:
-            logging.info('\t+0 VP: No additional score')
+            logging.info('\tNo additional score')
         self.victory_points += additional_score

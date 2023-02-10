@@ -6,15 +6,18 @@ import definitions
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 
 
-def main(no_of_players):
+def main(no_of_players, no_of_games):
     players = [definitions.Player(i) for i in range(no_of_players)]
     game = definitions.Game(players)
-    while True:
-        try:
+    if no_of_games < 0:
+        while True:
+            try:
+                play(game)
+            except KeyboardInterrupt:
+                return True
+    else:
+        for i in range(no_of_games):
             play(game)
-        except KeyboardInterrupt:
-            return True
-
 
 def play_a_turn(game, player):
     logging.info(f'{player.id} plays:')
@@ -57,4 +60,4 @@ def play(game):
 
 
 if __name__ == '__main__':
-    main(no_of_players=2)
+    main(no_of_players=2, no_of_games=2)
