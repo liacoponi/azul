@@ -126,6 +126,44 @@ class Game:
     def pick_first_player(self):
         self.first_player_id = random.randint(0, self.player_no)
 
+    def play_a_turn(self, player):
+        logging.info(f'{player.id} plays:')
+        # randomly pick for now, add AI/Player input here
+        display, color, to_line = random.choice(self.get_valid_moves(player.id))
+        self.transfer_tiles(player, display, color, to_line)
+
+    def play_a_game(self):
+        """ Play a game of Azul """
+        # reset bag and factory, pick first player, etc.
+        self.new_game()
+        # play rounds until a player completes a row
+        while not self.is_last_round:
+            # turn starts, reset players' boards
+            self.round_reset()
+            # pick first player
+            player_id = self.first_player_id - 1
+            # play players' turns until there are no tiles left
+            while not self.is_last_turn:
+                player_id = (player_id + 1) % self.player_no
+                self.play_a_turn(self.players[player_id])
+
+            # end players' turn
+            logging.info('** Turn ends **')
+            for player in self.players:
+                player.turn_end()
+                # end the game
+                if player.has_finished_row:
+                    self.is_last_round = True
+                else:
+                    self.is_last_turn = False
+
+        # End of game scoring
+        logging.info('** Game ends **')
+        for player in self.players:
+            player.score_final_vp()
+        self.final_scores()
+        self.games_counter += 1
+
     def round_reset(self):
         # reset factory displays and center
         logging.info('\n** Round Setup Starts **')
