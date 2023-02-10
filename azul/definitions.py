@@ -60,7 +60,6 @@ class Wall:
     def adjacent_tiles_points(self, x, y):
         vp = 0
         wall = self.wall_space
-        # todo: scoring is not like this!
         adjacent_indexes = [(x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1)]
         for (row, col) in adjacent_indexes:
             if (0 <= row <= 4) and (0 <= col <= 4):
